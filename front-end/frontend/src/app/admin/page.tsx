@@ -38,6 +38,7 @@ import {
   Close as CloseIcon,
 } from "@mui/icons-material";
 import { motion } from "framer-motion";
+import { showError, showSuccess } from "@/utils/notification";
 
 interface User {
   _id: string;
@@ -124,12 +125,12 @@ export default function AdminDashboard() {
     );
 
     if (response.ok) {
-      alert("User created successfully");
+      showSuccess("User created successfully");
       setCreateUserOpen(false);
       fetchData();
     } else {
       const error = await response.json();
-      alert(error.error || "Failed to create user");
+      showError(error.error || "Failed to create user");
     }
   };
 

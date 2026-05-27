@@ -38,6 +38,7 @@ import {
   Today as TodayIcon,
 } from "@mui/icons-material";
 import { motion } from "framer-motion";
+import { showError, showSuccess } from "@/utils/notification";
 
 interface Loan {
   _id: string;
@@ -148,14 +149,14 @@ export default function DisbursementDashboard() {
     );
 
     if (response.ok) {
-      alert("Loan disbursed successfully!");
+      showSuccess("Loan disbursed successfully!");
       setDisburseDialogOpen(false);
       setUtrNumber("");
       setSelectedLoan(null);
       fetchData();
     } else {
       const error = await response.json();
-      alert(error.error || "Failed to disburse loan");
+      showError(error.error || "Failed to disburse loan");
     }
   };
 

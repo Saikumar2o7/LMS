@@ -2,10 +2,13 @@ import type { Metadata } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
 import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
+import { AppRouterCacheProvider } from "@mui/material-nextjs/v14-appRouter";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import Navigation from "@/components/Navigation";
 import { theme } from "@/theme/theme";
+import NotificationProvider from "@/components/NotificationProvider";
+import "antd/dist/reset.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const spaceGrotesk = Space_Grotesk({
@@ -26,15 +29,19 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
       <body>
-        <ThemeProvider theme={theme}>
-          <CssBaseline />
-          <AuthProvider>
-            <Navigation />
-            <main style={{ minHeight: "100vh", background: "#f5f5f5" }}>
-              {children}
-            </main>
-          </AuthProvider>
-        </ThemeProvider>
+        <NotificationProvider>
+          <AppRouterCacheProvider>
+            <ThemeProvider theme={theme}>
+              <CssBaseline />
+              <AuthProvider>
+                <Navigation />
+                <main style={{ minHeight: "100vh", background: "#f5f5f5" }}>
+                  {children}
+                </main>
+              </AuthProvider>
+            </ThemeProvider>
+          </AppRouterCacheProvider>
+        </NotificationProvider>
       </body>
     </html>
   );

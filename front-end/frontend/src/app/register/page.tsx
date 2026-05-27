@@ -29,6 +29,7 @@ import {
   ArrowBack as ArrowBackIcon,
 } from "@mui/icons-material";
 import { motion } from "framer-motion";
+import { showSuccess } from "@/utils/notification";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -145,7 +146,7 @@ export default function RegisterPage() {
       }
 
       // Show success message
-      alert("Registration successful! Please login.");
+      showSuccess("Registration successful! Please login.");
       router.push("/login");
     } catch (err: any) {
       setError(err.message);

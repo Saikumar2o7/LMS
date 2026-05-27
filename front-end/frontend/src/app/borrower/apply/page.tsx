@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 import {
   Container,
   Box,
@@ -19,15 +20,18 @@ import {
   Paper,
   LinearProgress,
   MenuItem,
+  IconButton,
 } from "@mui/material";
 import {
   Person as PersonIcon,
   Description as DescriptionIcon,
-  Calculate as CalculateIcon,
+  ArrowBack as ArrowBackIcon,
 } from "@mui/icons-material";
 import { motion } from "framer-motion";
+import { showSuccess, showError } from "@/utils/notification";
 
 export default function LoanApplication() {
+  const router = useRouter();
   const [activeStep, setActiveStep] = useState(0);
   const [formData, setFormData] = useState({
     fullName: "",
@@ -144,8 +148,8 @@ export default function LoanApplication() {
       );
 
       if (response.ok) {
-        alert("Loan application submitted successfully!");
-        window.location.href = "/borrower/dashboard";
+        showSuccess("Success", "Loan application submitted successfully!");
+        router.push("/borrower/dashboard");
       } else {
         setError("Failed to submit application");
       }
@@ -163,12 +167,30 @@ export default function LoanApplication() {
   };
 
   const handleBack = () => {
-    setActiveStep((prev) => prev - 1);
-    setError("");
+    if (activeStep === 0) {
+      // Go back to dashboard on first step
+      router.push("/borrower/dashboard");
+    } else {
+      setActiveStep((prev) => prev - 1);
+      setError("");
+    }
+  };
+
+  const handleCancel = () => {
+    router.push("/borrower/dashboard");
   };
 
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
+      {/* Back to Dashboard Button - Always visible */}
+      <Button
+        startIcon={<ArrowBackIcon />}
+        onClick={handleCancel}
+        sx={{ mb: 2 }}
+      >
+        Back to Dashboard
+      </Button>
+
       <Card>
         <CardContent sx={{ p: 4 }}>
           <Typography
@@ -239,19 +261,20 @@ export default function LoanApplication() {
                     helperText="Format: 5 letters, 4 digits, 1 letter"
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid item xs={12}>
                   <TextField
                     fullWidth
+                    label="Date of Birth"
                     type="date"
                     value={formData.dateOfBirth}
                     onChange={(e) =>
                       setFormData({ ...formData, dateOfBirth: e.target.value })
                     }
                     required
-                    helperText="Date of Birth"
+                    InputLabelProps={{ shrink: true }}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid item xs={12}>
                   <TextField
                     fullWidth
                     label="Monthly Salary (₹)"
@@ -266,7 +289,7 @@ export default function LoanApplication() {
                     required
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid item xs={12}>
                   <TextField
                     fullWidth
                     select
@@ -417,8 +440,8 @@ export default function LoanApplication() {
           )}
 
           <Box sx={{ display: "flex", justifyContent: "space-between", mt: 4 }}>
-            <Button disabled={activeStep === 0} onClick={handleBack}>
-              Back
+            <Button onClick={handleBack} disabled={loading} variant="outlined">
+              {activeStep === 0 ? "Cancel" : "Back"}
             </Button>
             <Button
               variant="contained"
@@ -426,6 +449,10 @@ export default function LoanApplication() {
               disabled={loading}
               sx={{
                 background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                "&:hover": {
+                  background:
+                    "linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)",
+                },
               }}
             >
               {loading

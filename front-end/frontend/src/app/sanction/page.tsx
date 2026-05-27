@@ -31,6 +31,7 @@ import {
   TrendingUp as TrendingUpIcon,
 } from "@mui/icons-material";
 import { motion } from "framer-motion";
+import { showError, showInfo } from "@/utils/notification";
 
 interface Loan {
   _id: string;
@@ -97,7 +98,7 @@ export default function SanctionDashboard() {
     if (!selectedLoan) return;
 
     if (actionType === "reject" && !rejectionReason) {
-      alert("Please provide a rejection reason");
+      showRe("Please provide a rejection reason");
       return;
     }
 
@@ -119,7 +120,7 @@ export default function SanctionDashboard() {
       );
 
       if (response.ok) {
-        alert(
+        showInfo(
           `Loan ${actionType === "approve" ? "approved" : "rejected"} successfully`,
         );
         setActionDialogOpen(false);
@@ -127,11 +128,11 @@ export default function SanctionDashboard() {
         fetchLoans();
       } else {
         const errorData = await response.json();
-        alert(errorData.error || "Action failed");
+        showError(errorData.error || "Action failed");
       }
     } catch (error) {
       console.error("Error:", error);
-      alert("Failed to process request");
+      showError("Failed to process request");
     }
   };
 

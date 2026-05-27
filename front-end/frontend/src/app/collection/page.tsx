@@ -34,6 +34,7 @@ import {
   History as HistoryIcon,
 } from "@mui/icons-material";
 import { motion } from "framer-motion";
+import { showError, showSuccess, showWarning } from "@/utils/notification";
 
 interface Loan {
   _id: string;
@@ -118,13 +119,13 @@ export default function CollectionDashboard() {
   const recordPayment = async () => {
     if (!selectedLoan) return;
     if (!utrNumber || !paymentAmount) {
-      alert("Please fill all fields");
+      showError("Please fill all fields");
       return;
     }
 
     const amount = parseFloat(paymentAmount);
     if (isNaN(amount) || amount <= 0) {
-      alert("Please enter a valid amount");
+      showError("Please enter a valid amount");
       return;
     }
 
@@ -147,7 +148,7 @@ export default function CollectionDashboard() {
     );
 
     if (response.ok) {
-      alert("Payment recorded successfully!");
+      showSuccess("Payment recorded successfully!");
       setPaymentDialogOpen(false);
       setUtrNumber("");
       setPaymentAmount("");
@@ -157,7 +158,7 @@ export default function CollectionDashboard() {
       }
     } else {
       const error = await response.json();
-      alert(error.error || "Failed to record payment");
+      showError(error.error || "Failed to record payment");
     }
   };
 

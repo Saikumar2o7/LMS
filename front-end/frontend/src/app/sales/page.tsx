@@ -35,6 +35,7 @@ import {
   AccessTime as AccessTimeIcon,
 } from "@mui/icons-material";
 import { motion } from "framer-motion";
+import { showError, showSuccess } from "@/utils/notification";
 
 interface Lead {
   _id: string;
@@ -110,13 +111,13 @@ export default function SalesDashboard() {
     );
 
     if (response.ok) {
-      alert("Contact logged successfully");
+      showSuccess("Contact logged successfully");
       setContactDialogOpen(false);
       setContactNotes("");
       setSelectedLead(null);
       fetchLeads();
     } else {
-      alert("Failed to log contact");
+      showError("Failed to log contact");
     }
   };
 
