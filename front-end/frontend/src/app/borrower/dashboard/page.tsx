@@ -2,7 +2,38 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import {
+  Container,
+  Box,
+  Typography,
+  Grid,
+  Card,
+  CardContent,
+  Button,
+  Chip,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  LinearProgress,
+  Alert,
+  CircularProgress,
+  Tabs,
+  Tab,
+  Stack,
+} from "@mui/material";
+import {
+  Add as AddIcon,
+  TrendingUp as TrendingUpIcon,
+  AttachMoney as MoneyIcon,
+  Schedule as ScheduleIcon,
+  CheckCircle as CheckCircleIcon,
+} from "@mui/icons-material";
 import Link from "next/link";
+import { motion } from "framer-motion";
 
 interface Application {
   _id: string;
@@ -19,6 +50,7 @@ interface Application {
 export default function BorrowerDashboard() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tabValue, setTabValue] = useState(0);
   const { token } = useAuth();
 
   useEffect(() => {
@@ -37,13 +69,11 @@ export default function BorrowerDashboard() {
       if (Array.isArray(data)) {
         setApplications(data);
       } else if (data && Array.isArray(data.data)) {
-        // Common pattern: { success: true, data: [...] }
         setApplications(data.data);
       } else if (data && Array.isArray(data.applications)) {
         setApplications(data.applications);
       } else {
-        console.warn("Unexpected API response format:", data);
-        setApplications([]); // fallback
+        setApplications([]);
       }
     } catch (error) {
       console.error("Failed to fetch applications:", error);
@@ -54,132 +84,307 @@ export default function BorrowerDashboard() {
   };
 
   const getStatusColor = (status: string) => {
-    const colors = {
-      draft: "bg-gray-100 text-gray-800",
-      applied: "bg-yellow-100 text-yellow-800",
-      sanctioned: "bg-blue-100 text-blue-800",
-      rejected: "bg-red-100 text-red-800",
-      disbursed: "bg-green-100 text-green-800",
-      active: "bg-purple-100 text-purple-800",
-      closed: "bg-gray-100 text-gray-800",
+    const colors: Record<string, any> = {
+      draft: { bg: "#f3e5f5", color: "#6a1b9a" },
+      applied: { bg: "#fff3e0", color: "#e65100" },
+      sanctioned: { bg: "#e3f2fd", color: "#1565c0" },
+      rejected: { bg: "#ffebee", color: "#c62828" },
+      disbursed: { bg: "#e8f5e9", color: "#2e7d32" },
+      active: { bg: "#e0f7fa", color: "#00695c" },
+      closed: { bg: "#e8eaf6", color: "#283593" },
     };
-    return colors[status as keyof typeof colors] || "bg-gray-100 text-gray-800";
+    return colors[status] || { bg: "#f5f5f5", color: "#424242" };
   };
+
+  const getStats = () => {
+    const active = applications.filter((app) =>
+      ["active", "disbursed"].includes(app.status),
+    ).length;
+    const sanctioned = applications.filter(
+      (app) => app.status === "sanctioned",
+    ).length;
+    const closed = applications.filter((app) => app.status === "closed").length;
+    const totalAmount = applications.reduce(
+      (sum, app) => sum + (app.loanConfig?.amount || 0),
+      0,
+    );
+    return { active, sanctioned, closed, totalAmount };
+  };
+
+  const stats = getStats();
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-xl">Loading...</div>
-      </div>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "60vh",
+        }}
+      >
+        <CircularProgress />
+      </Box>
     );
   }
 
+  const filteredApplications = applications.filter((app) => {
+    if (tabValue === 0) return true;
+    if (tabValue === 1) return ["active", "disbursed"].includes(app.status);
+    if (tabValue === 2) return app.status === "sanctioned";
+    if (tabValue === 3) return app.status === "closed";
+    return true;
+  });
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">My Loan Applications</h1>
-          <Link
-            href="/borrower/apply"
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+    <Container maxWidth="xl" sx={{ py: 4 }}>
+      {/* Header */}
+      <Box
+        sx={{
+          mb: 4,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <Box>
+          <Typography variant="h4" fontWeight="bold" gutterBottom>
+            My Dashboard
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Track your loan applications and manage your finances
+          </Typography>
+        </Box>
+        <Button
+          component={Link}
+          href="/borrower/apply"
+          variant="contained"
+          startIcon={<AddIcon />}
+          sx={{
+            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            "&:hover": {
+              background: "linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)",
+            },
+          }}
+        >
+          New Application
+        </Button>
+      </Box>
+
+      {/* Stats Cards */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
           >
-            + New Application
-          </Link>
-        </div>
-
-        {applications.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-12 text-center">
-            <p className="text-gray-500 text-lg mb-4">
-              No loan applications yet
-            </p>
-            <Link
-              href="/borrower/apply"
-              className="text-blue-600 hover:text-blue-700 font-semibold"
+            <Card
+              sx={{
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                color: "white",
+              }}
             >
-              Start your first application →
-            </Link>
-          </div>
-        ) : (
-          <div className="grid gap-6">
-            {applications?.map((app) => (
-              <div key={app._id} className="bg-white rounded-lg shadow p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <span
-                      className={`px-2 py-1 text-xs font-semibold rounded-full capitalize ${getStatusColor(
-                        app.status,
-                      )}`}
-                    >
-                      {app.status}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-500">
-                    Applied on: {new Date(app.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
+              <CardContent>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <Box>
+                    <Typography variant="h6">Total Applications</Typography>
+                    <Typography variant="h3" fontWeight="bold">
+                      {applications.length}
+                    </Typography>
+                  </Box>
+                  <MoneyIcon sx={{ fontSize: 48, opacity: 0.8 }} />
+                </Box>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <Card
+              sx={{
+                background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+                color: "white",
+              }}
+            >
+              <CardContent>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <Box>
+                    <Typography variant="h6">Active Loans</Typography>
+                    <Typography variant="h3" fontWeight="bold">
+                      {stats.active}
+                    </Typography>
+                  </Box>
+                  <TrendingUpIcon sx={{ fontSize: 48, opacity: 0.8 }} />
+                </Box>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <Card
+              sx={{
+                background: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+                color: "white",
+              }}
+            >
+              <CardContent>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <Box>
+                    <Typography variant="h6">Sanctioned</Typography>
+                    <Typography variant="h3" fontWeight="bold">
+                      {stats.sanctioned}
+                    </Typography>
+                  </Box>
+                  <ScheduleIcon sx={{ fontSize: 48, opacity: 0.8 }} />
+                </Box>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <Card
+              sx={{
+                background: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
+                color: "white",
+              }}
+            >
+              <CardContent>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <Box>
+                    <Typography variant="h6">Closed Loans</Typography>
+                    <Typography variant="h3" fontWeight="bold">
+                      {stats.closed}
+                    </Typography>
+                  </Box>
+                  <CheckCircleIcon sx={{ fontSize: 48, opacity: 0.8 }} />
+                </Box>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </Grid>
+      </Grid>
 
-                {app.loanConfig ? (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div>
-                      <p className="text-gray-600 text-sm">Loan Amount</p>
-                      <p className="font-semibold">
-                        ₹{app.loanConfig.amount.toLocaleString()}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600 text-sm">Tenure</p>
-                      <p className="font-semibold">
-                        {app.loanConfig.tenure} days
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600 text-sm">Total Repayment</p>
-                      <p className="font-semibold">
-                        ₹{app.loanConfig.totalRepayment.toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-gray-500 mb-4">Application in progress</p>
-                )}
+      {/* Applications Table */}
+      <Card>
+        <CardContent>
+          <Typography variant="h6" fontWeight="bold" gutterBottom>
+            Loan Applications
+          </Typography>
+          <Tabs
+            value={tabValue}
+            onChange={(e, v) => setTabValue(v)}
+            sx={{ mb: 3 }}
+          >
+            <Tab label="All" />
+            <Tab label="Active" />
+            <Tab label="Sanctioned" />
+            <Tab label="Closed" />
+          </Tabs>
 
-                {app.outstandingBalance !== undefined &&
-                  app.outstandingBalance > 0 && (
-                    <div className="border-t pt-4 mt-2">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="text-gray-600 text-sm">
-                            Outstanding Balance
-                          </p>
-                          <p className="font-bold text-red-600">
-                            ₹{app.outstandingBalance.toFixed(2)}
-                          </p>
-                        </div>
-                        <div className="w-48 bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-green-600 rounded-full h-2"
-                            style={{
-                              width: `${(((app.loanConfig?.totalRepayment || 0) - app.outstandingBalance) / (app.loanConfig?.totalRepayment || 1)) * 100}%`,
+          {filteredApplications.length === 0 ? (
+            <Box sx={{ textAlign: "center", py: 8 }}>
+              <Typography variant="body1" color="text.secondary">
+                No loan applications found
+              </Typography>
+              <Button
+                component={Link}
+                href="/borrower/apply"
+                variant="outlined"
+                sx={{ mt: 2 }}
+              >
+                Start Your First Application
+              </Button>
+            </Box>
+          ) : (
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Application ID</TableCell>
+                    <TableCell>Amount</TableCell>
+                    <TableCell>Tenure</TableCell>
+                    <TableCell>Total Repayment</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Date</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredApplications.map((app) => {
+                    const statusColor = getStatusColor(app.status);
+                    return (
+                      <TableRow key={app._id} hover>
+                        <TableCell>{app._id.slice(-8)}</TableCell>
+                        <TableCell>
+                          ₹{app.loanConfig?.amount?.toLocaleString() || "-"}
+                        </TableCell>
+                        <TableCell>
+                          {app.loanConfig?.tenure || "-"} days
+                        </TableCell>
+                        <TableCell>
+                          ₹{app.loanConfig?.totalRepayment?.toFixed(2) || "-"}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={app.status.toUpperCase()}
+                            size="small"
+                            sx={{
+                              bgcolor: statusColor.bg,
+                              color: statusColor.color,
+                              fontWeight: "bold",
                             }}
                           />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                {app.status === "rejected" && (
-                  <div className="mt-4 p-3 bg-red-50 rounded border border-red-200">
-                    <p className="text-red-800 text-sm">
-                      {/* Note: You'd need to fetch rejection reason from API */}
-                      Your application was not approved at this time.
-                    </p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+                        </TableCell>
+                        <TableCell>
+                          {new Date(app.createdAt).toLocaleDateString()}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </CardContent>
+      </Card>
+    </Container>
   );
 }

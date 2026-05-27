@@ -3,13 +3,49 @@
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
 import { useState } from "react";
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
+  IconButton,
+  Box,
+  Menu,
+  MenuItem,
+  Avatar,
+  Divider,
+  Drawer,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  useTheme,
+  useMediaQuery,
+  Chip,
+} from "@mui/material";
+import {
+  Dashboard as DashboardIcon,
+  AddCircle as AddCircleIcon,
+  People as PeopleIcon,
+  Receipt as ReceiptIcon,
+  Leaderboard as LeaderboardIcon,
+  PendingActions as PendingActionsIcon,
+  Payments as PaymentsIcon,
+  Logout as LogoutIcon,
+  Menu as MenuIcon,
+  Home as HomeIcon,
+  TrendingUp as TrendingUpIcon,
+  AccountBalance as AccountBalanceIcon,
+} from "@mui/icons-material";
 
 export default function Navigation() {
   const { user, logout } = useAuth();
   const pathname = usePathname();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   if (!user) return null;
 
@@ -17,25 +53,52 @@ export default function Navigation() {
     switch (user.role) {
       case "borrower":
         return [
-          { name: "Dashboard", href: "/borrower/dashboard", icon: "📊" },
-          { name: "New Application", href: "/borrower/apply", icon: "➕" },
+          {
+            name: "Dashboard",
+            href: "/borrower/dashboard",
+            icon: <DashboardIcon />,
+          },
+          {
+            name: "New Application",
+            href: "/borrower/apply",
+            icon: <AddCircleIcon />,
+          },
         ];
       case "admin":
         return [
-          { name: "Overview", href: "/admin", icon: "📈" },
-          { name: "Users", href: "/admin?tab=users", icon: "👥" },
-          { name: "Loans", href: "/admin?tab=loans", icon: "💰" },
+          { name: "Overview", href: "/admin", icon: <DashboardIcon /> },
+          { name: "Users", href: "/admin?tab=users", icon: <PeopleIcon /> },
+          { name: "Loans", href: "/admin?tab=loans", icon: <ReceiptIcon /> },
         ];
       case "sales":
-        return [{ name: "Leads", href: "/sales", icon: "👤" }];
+        return [
+          { name: "Leads", href: "/sales", icon: <PeopleIcon /> },
+          { name: "Dashboard", href: "/sales", icon: <DashboardIcon /> },
+        ];
       case "sanction":
-        return [{ name: "Pending Reviews", href: "/sanction", icon: "📋" }];
+        return [
+          {
+            name: "Pending Reviews",
+            href: "/sanction",
+            icon: <PendingActionsIcon />,
+          },
+        ];
       case "disbursement":
         return [
-          { name: "Ready to Disburse", href: "/disbursement", icon: "💵" },
+          {
+            name: "Ready to Disburse",
+            href: "/disbursement",
+            icon: <PaymentsIcon />,
+          },
         ];
       case "collection":
-        return [{ name: "Active Loans", href: "/collection", icon: "📥" }];
+        return [
+          {
+            name: "Active Loans",
+            href: "/collection",
+            icon: <AccountBalanceIcon />,
+          },
+        ];
       default:
         return [];
     }
@@ -43,175 +106,325 @@ export default function Navigation() {
 
   const navItems = getNavItems();
 
+  const getRoleColor = () => {
+    const colors: Record<string, string> = {
+      borrower: "#667eea",
+      admin: "#f093fb",
+      sales: "#4facfe",
+      sanction: "#43e97b",
+      disbursement: "#fa709a",
+      collection: "#fee140",
+    };
+    return colors[user.role] || "#667eea";
+  };
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleLogout = () => {
+    handleMenuClose();
+    logout();
+  };
+
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen);
+  };
+
+  const drawer = (
+    <Box sx={{ width: 280, bgcolor: "background.paper", height: "100%" }}>
+      <Box
+        sx={{
+          p: 3,
+          background: `linear-gradient(135deg, ${getRoleColor()} 0%, #764ba2 100%)`,
+          color: "white",
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
+          <Avatar
+            sx={{
+              bgcolor: "rgba(255, 255, 255, 0.2)",
+              width: 48,
+              height: 48,
+            }}
+          >
+            {user.fullName?.[0] || user.email[0].toUpperCase()}
+          </Avatar>
+          <Box>
+            <Typography variant="subtitle1" fontWeight="bold">
+              {user.fullName || user.email.split("@")[0]}
+            </Typography>
+            <Typography variant="caption" sx={{ opacity: 0.8 }}>
+              {user.email}
+            </Typography>
+          </Box>
+        </Box>
+        <Chip
+          label={user.role.toUpperCase()}
+          size="small"
+          sx={{
+            bgcolor: "rgba(255, 255, 255, 0.2)",
+            color: "white",
+            fontWeight: "bold",
+          }}
+        />
+      </Box>
+
+      <List sx={{ pt: 2 }}>
+        {navItems.map((item) => (
+          <ListItem
+            key={item.href}
+            component={Link}
+            href={item.href}
+            onClick={() => setMobileOpen(false)}
+            sx={{
+              mb: 1,
+              mx: 1,
+              borderRadius: 2,
+              bgcolor:
+                pathname === item.href
+                  ? "rgba(102, 126, 234, 0.1)"
+                  : "transparent",
+              color: pathname === item.href ? "primary.main" : "text.primary",
+              "&:hover": {
+                bgcolor: "rgba(102, 126, 234, 0.08)",
+              },
+            }}
+          >
+            <ListItemIcon
+              sx={{
+                color: pathname === item.href ? "primary.main" : "inherit",
+                minWidth: 40,
+              }}
+            >
+              {item.icon}
+            </ListItemIcon>
+            <ListItemText primary={item.name} />
+          </ListItem>
+        ))}
+      </List>
+
+      <Divider sx={{ my: 2 }} />
+
+      <List>
+        <ListItem
+          onClick={handleLogout}
+          sx={{
+            mb: 1,
+            mx: 1,
+            borderRadius: 2,
+            cursor: "pointer",
+            color: "error.main",
+            "&:hover": {
+              bgcolor: "rgba(211, 47, 47, 0.08)",
+            },
+          }}
+        >
+          <ListItemIcon sx={{ color: "error.main", minWidth: 40 }}>
+            <LogoutIcon />
+          </ListItemIcon>
+          <ListItemText primary="Logout" />
+        </ListItem>
+      </List>
+    </Box>
+  );
+
   return (
-    <nav className="bg-white shadow-lg sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex items-center">
+    <>
+      <AppBar
+        position="sticky"
+        elevation={0}
+        sx={{
+          bgcolor: "background.paper",
+          borderBottom: "1px solid",
+          borderColor: "divider",
+        }}
+      >
+        <Toolbar sx={{ justifyContent: "space-between", px: { xs: 2, md: 4 } }}>
+          {/* Logo */}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            {isMobile && (
+              <IconButton
+                color="inherit"
+                edge="start"
+                onClick={handleDrawerToggle}
+                sx={{ mr: 2 }}
+              >
+                <MenuIcon />
+              </IconButton>
+            )}
             <Link
               href={
                 user.role === "borrower"
                   ? "/borrower/dashboard"
                   : `/${user.role}`
               }
-              className="flex items-center space-x-2"
+              style={{
+                textDecoration: "none",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
             >
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">L</span>
-              </div>
-              <span className="font-bold text-xl bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  background: `linear-gradient(135deg, ${getRoleColor()} 0%, #764ba2 100%)`,
+                  borderRadius: 2,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Typography variant="h6" fontWeight="bold" color="white">
+                  L
+                </Typography>
+              </Box>
+              <Typography
+                variant="h6"
+                fontWeight="bold"
+                sx={{
+                  background: `linear-gradient(135deg, ${getRoleColor()} 0%, #764ba2 100%)`,
+                  backgroundClip: "text",
+                  WebkitBackgroundClip: "text",
+                  color: "transparent",
+                }}
+              >
                 LoanFlow
-              </span>
+              </Typography>
             </Link>
-          </div>
+          </Box>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-4">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  pathname === item.href
-                    ? "bg-blue-50 text-blue-700"
-                    : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <span className="mr-2">{item.icon}</span>
-                {item.name}
-              </Link>
-            ))}
-
-            <div className="border-l border-gray-300 h-8 mx-2"></div>
-
-            <div className="flex items-center space-x-3">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-                  {user.fullName?.[0] || user.email[0].toUpperCase()}
-                </div>
-                <span className="text-sm text-gray-700 hidden lg:block">
-                  {user.fullName || user.email.split("@")[0]}
-                </span>
-              </div>
-              <button
-                onClick={logout}
-                className="flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-all duration-200"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                  />
-                </svg>
-                <span>Logout</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Mobile menu button */}
-          <div className="md:hidden flex items-center">
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="text-gray-700 hover:text-gray-900 focus:outline-none"
-            >
-              <svg
-                className="h-6 w-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                {isMobileMenuOpen ? (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                ) : (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                )}
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile menu */}
-      {isMobileMenuOpen && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          className="md:hidden bg-white border-t border-gray-200"
-        >
-          <div className="px-2 pt-2 pb-3 space-y-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setIsMobileMenuOpen(false)}
-                className={`block px-3 py-2 rounded-md text-base font-medium ${
-                  pathname === item.href
-                    ? "bg-blue-50 text-blue-700"
-                    : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <span className="mr-2">{item.icon}</span>
-                {item.name}
-              </Link>
-            ))}
-            <div className="border-t border-gray-200 pt-2 mt-2">
-              <div className="px-3 py-2">
-                <div className="flex items-center space-x-2 mb-2">
-                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-                    {user.fullName?.[0] || user.email[0].toUpperCase()}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      {user.fullName || user.email.split("@")[0]}
-                    </p>
-                    <p className="text-xs text-gray-500">{user.email}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    logout();
-                    setIsMobileMenuOpen(false);
+          {!isMobile && (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              {navItems.map((item) => (
+                <Button
+                  key={item.href}
+                  component={Link}
+                  href={item.href}
+                  startIcon={item.icon}
+                  sx={{
+                    textTransform: "none",
+                    fontWeight: 500,
+                    borderRadius: 2,
+                    px: 2,
+                    py: 1,
+                    bgcolor:
+                      pathname === item.href
+                        ? "rgba(102, 126, 234, 0.1)"
+                        : "transparent",
+                    color:
+                      pathname === item.href ? "primary.main" : "text.primary",
+                    "&:hover": {
+                      bgcolor: "rgba(102, 126, 234, 0.08)",
+                    },
                   }}
-                  className="w-full flex items-center justify-center space-x-2 px-3 py-2 rounded-md text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100"
                 >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                    />
-                  </svg>
-                  <span>Logout</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      )}
-    </nav>
+                  {item.name}
+                </Button>
+              ))}
+            </Box>
+          )}
+
+          {/* User Menu */}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            {!isMobile && (
+              <Chip
+                label={user.role.toUpperCase()}
+                size="small"
+                sx={{
+                  bgcolor: `linear-gradient(135deg, ${getRoleColor()} 0%, #764ba2 100%)`,
+                  color: "white",
+                  fontWeight: "bold",
+                }}
+              />
+            )}
+            <IconButton onClick={handleMenuOpen} size="small">
+              <Avatar
+                sx={{
+                  width: 36,
+                  height: 36,
+                  bgcolor: `linear-gradient(135deg, ${getRoleColor()} 0%, #764ba2 100%)`,
+                }}
+              >
+                {user.fullName?.[0] || user.email[0].toUpperCase()}
+              </Avatar>
+            </IconButton>
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={handleMenuClose}
+              transformOrigin={{ horizontal: "right", vertical: "top" }}
+              anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+              PaperProps={{
+                sx: {
+                  mt: 1,
+                  width: 280,
+                  borderRadius: 2,
+                  boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+                },
+              }}
+            >
+              <Box sx={{ p: 2, textAlign: "center" }}>
+                <Avatar
+                  sx={{
+                    width: 60,
+                    height: 60,
+                    mx: "auto",
+                    mb: 1,
+                    bgcolor: `linear-gradient(135deg, ${getRoleColor()} 0%, #764ba2 100%)`,
+                  }}
+                >
+                  {user.fullName?.[0] || user.email[0].toUpperCase()}
+                </Avatar>
+                <Typography variant="subtitle1" fontWeight="bold">
+                  {user.fullName || "User"}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {user.email}
+                </Typography>
+                <Chip
+                  label={user.role.toUpperCase()}
+                  size="small"
+                  sx={{
+                    mt: 1,
+                    bgcolor: `linear-gradient(135deg, ${getRoleColor()} 0%, #764ba2 100%)`,
+                    color: "white",
+                    fontWeight: "bold",
+                  }}
+                />
+              </Box>
+              <Divider />
+              <MenuItem onClick={handleLogout} sx={{ color: "error.main" }}>
+                <ListItemIcon>
+                  <LogoutIcon fontSize="small" color="error" />
+                </ListItemIcon>
+                Logout
+              </MenuItem>
+            </Menu>
+          </Box>
+        </Toolbar>
+      </AppBar>
+
+      {/* Mobile Drawer */}
+      <Drawer
+        anchor="left"
+        open={mobileOpen}
+        onClose={handleDrawerToggle}
+        ModalProps={{ keepMounted: true }}
+        sx={{
+          display: { xs: "block", md: "none" },
+          "& .MuiDrawer-paper": { width: 280, boxSizing: "border-box" },
+        }}
+      >
+        {drawer}
+      </Drawer>
+    </>
   );
 }

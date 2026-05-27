@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
+import { ThemeProvider } from "@mui/material/styles";
+import CssBaseline from "@mui/material/CssBaseline";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import Navigation from "@/components/Navigation";
+import { theme } from "@/theme/theme";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const spaceGrotesk = Space_Grotesk({
@@ -23,12 +26,15 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
       <body>
-        <AuthProvider>
-          <Navigation />
-          <main className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-            {children}
-          </main>
-        </AuthProvider>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <AuthProvider>
+            <Navigation />
+            <main style={{ minHeight: "100vh", background: "#f5f5f5" }}>
+              {children}
+            </main>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

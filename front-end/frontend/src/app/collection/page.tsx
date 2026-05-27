@@ -2,10 +2,42 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import {
+  Container,
+  Box,
+  Typography,
+  Grid,
+  Card,
+  CardContent,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Button,
+  Chip,
+  LinearProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  TextField,
+  DialogActions,
+  IconButton,
+  Paper,
+} from "@mui/material";
+import {
+  Receipt as ReceiptIcon,
+  TrendingUp as TrendingUpIcon,
+  People as PeopleIcon,
+  Close as CloseIcon,
+  History as HistoryIcon,
+} from "@mui/icons-material";
+import { motion } from "framer-motion";
 
 interface Loan {
   _id: string;
-  userId: { email: string; fullName: string; phoneNumber?: string };
+  userId: { email: string; fullName: string };
   personalDetails: { fullName: string };
   loanConfig: { totalRepayment: number };
   outstandingBalance: number;
@@ -26,10 +58,13 @@ interface Payment {
 export default function CollectionDashboard() {
   const [activeLoans, setActiveLoans] = useState<Loan[]>([]);
   const [closedLoans, setClosedLoans] = useState<Loan[]>([]);
-  const [selectedLoan, setSelectedLoan] = useState<string | null>(null);
+  const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
   const [paymentHistory, setPaymentHistory] = useState<Payment[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [utrNumber, setUtrNumber] = useState("");
   const { token } = useAuth();
 
   useEffect(() => {
@@ -64,39 +99,34 @@ export default function CollectionDashboard() {
     }
   };
 
-  const fetchPaymentHistory = async (loanId: string) => {
+  const fetchPaymentHistory = async (loan: Loan) => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/collection/payments/${loanId}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/collection/payments/${loan._id}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
       );
       const data = await response.json();
       setPaymentHistory(data.payments || []);
-      setSelectedLoan(loanId);
+      setSelectedLoan(loan);
     } catch (error) {
       console.error("Failed to fetch payment history:", error);
     }
   };
 
-  const recordPayment = async (loanId: string) => {
-    const utrNumber = prompt("Enter UTR Number:");
-    if (!utrNumber) return;
+  const recordPayment = async () => {
+    if (!selectedLoan) return;
+    if (!utrNumber || !paymentAmount) {
+      alert("Please fill all fields");
+      return;
+    }
 
-    const amountStr = prompt("Enter Payment Amount (₹):");
-    if (!amountStr) return;
-
-    const amount = parseFloat(amountStr);
+    const amount = parseFloat(paymentAmount);
     if (isNaN(amount) || amount <= 0) {
       alert("Please enter a valid amount");
       return;
     }
-
-    const paymentMethod = prompt(
-      "Payment Method (bank_transfer/cheque/cash/online):",
-      "bank_transfer",
-    );
 
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/collection/payment`,
@@ -107,23 +137,23 @@ export default function CollectionDashboard() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          loanId,
+          loanId: selectedLoan._id,
           utrNumber,
           amount,
           paymentDate: new Date().toISOString(),
-          paymentMethod: paymentMethod || "bank_transfer",
+          paymentMethod: "bank_transfer",
         }),
       },
     );
 
     if (response.ok) {
-      const result = await response.json();
-      alert(
-        `Payment recorded successfully! Outstanding balance: ₹${result.loan.outstandingBalance.toFixed(2)}`,
-      );
+      alert("Payment recorded successfully!");
+      setPaymentDialogOpen(false);
+      setUtrNumber("");
+      setPaymentAmount("");
       fetchData();
-      if (selectedLoan === loanId) {
-        fetchPaymentHistory(loanId);
+      if (selectedLoan) {
+        fetchPaymentHistory(selectedLoan);
       }
     } else {
       const error = await response.json();
@@ -131,248 +161,289 @@ export default function CollectionDashboard() {
     }
   };
 
+  const statsCards = [
+    {
+      title: "Total Collected",
+      value: `₹${stats?.totalPaymentsCollected?.toFixed(2) || 0}`,
+      icon: ReceiptIcon,
+      color: "#667eea",
+    },
+    {
+      title: "Active Loans",
+      value: stats?.activeLoans || 0,
+      icon: TrendingUpIcon,
+      color: "#f093fb",
+    },
+    {
+      title: "Closed Loans",
+      value: stats?.fullyPaidLoans || 0,
+      icon: PeopleIcon,
+      color: "#4facfe",
+    },
+    {
+      title: "Avg Payment",
+      value: `₹${stats?.averagePaymentAmount?.toFixed(2) || 0}`,
+      icon: HistoryIcon,
+      color: "#43e97b",
+    },
+  ];
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-xl">Loading...</div>
-      </div>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "60vh",
+        }}
+      >
+        <LinearProgress sx={{ width: "50%" }} />
+      </Box>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8">Collection Dashboard</h1>
+    <Container maxWidth="xl" sx={{ py: 4 }}>
+      <Typography variant="h4" fontWeight="bold" gutterBottom>
+        Collection Dashboard
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
+        Manage loan collections and track payments
+      </Typography>
 
-        {/* Stats Cards */}
-        {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow p-6 text-white">
-              <p className="text-sm opacity-90">Total Collected</p>
-              <p className="text-3xl font-bold">
-                ₹{stats.totalPaymentsCollected?.toFixed(2) || 0}
-              </p>
-            </div>
-            <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg shadow p-6 text-white">
-              <p className="text-sm opacity-90">Active Loans</p>
-              <p className="text-3xl font-bold">{stats.activeLoans || 0}</p>
-            </div>
-            <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg shadow p-6 text-white">
-              <p className="text-sm opacity-90">Closed Loans</p>
-              <p className="text-3xl font-bold">{stats.fullyPaidLoans || 0}</p>
-            </div>
-            <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg shadow p-6 text-white">
-              <p className="text-sm opacity-90">Avg Payment</p>
-              <p className="text-3xl font-bold">
-                ₹{stats.averagePaymentAmount?.toFixed(2) || 0}
-              </p>
-            </div>
-          </div>
-        )}
+      {/* Stats Cards */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        {statsCards.map((stat, index) => (
+          <Grid item xs={12} sm={6} md={3} key={index}>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+            >
+              <Card sx={{ background: stat.color, color: "white" }}>
+                <CardContent>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Box>
+                      <Typography variant="h6">{stat.title}</Typography>
+                      <Typography variant="h4" fontWeight="bold">
+                        {stat.value}
+                      </Typography>
+                    </Box>
+                    <stat.icon sx={{ fontSize: 48, opacity: 0.8 }} />
+                  </Box>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </Grid>
+        ))}
+      </Grid>
 
-        {/* Active Loans */}
-        <div className="mb-12">
-          <h2 className="text-2xl font-semibold mb-4">Active Loans</h2>
-          <div className="grid gap-6">
-            {activeLoans.length === 0 ? (
-              <div className="bg-white rounded-lg shadow p-8 text-center">
-                <p className="text-gray-500">No active loans</p>
-              </div>
-            ) : (
-              activeLoans.map((loan) => (
-                <div
-                  key={loan._id}
-                  className="bg-white rounded-lg shadow overflow-hidden"
+      {/* Active Loans */}
+      <Typography variant="h5" fontWeight="bold" sx={{ mb: 2 }}>
+        Active Loans
+      </Typography>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        {activeLoans.map((loan) => (
+          <Grid item xs={12} key={loan._id}>
+            <Card>
+              <CardContent>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    flexWrap: "wrap",
+                    gap: 2,
+                  }}
                 >
-                  <div className="p-6">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <h3 className="text-xl font-semibold mb-2">
-                          {loan.personalDetails.fullName}
-                        </h3>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          <div>
-                            <p className="text-gray-600">Email:</p>
-                            <p className="font-medium text-sm">
-                              {loan.userId.email}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-gray-600">Total Repayment:</p>
-                            <p className="font-medium">
-                              ₹{loan.loanConfig.totalRepayment.toFixed(2)}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-gray-600">Total Paid:</p>
-                            <p className="font-medium text-green-600">
-                              ₹{loan.totalPaid.toFixed(2)}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-gray-600">Outstanding:</p>
-                            <p className="font-bold text-red-600">
-                              ₹{loan.outstandingBalance.toFixed(2)}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="mt-4">
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div
-                              className="bg-green-600 rounded-full h-2 transition-all"
-                              style={{
-                                width: `${(loan.totalPaid / loan.loanConfig.totalRepayment) * 100}%`,
-                              }}
-                            />
-                          </div>
-                          <p className="text-sm text-gray-600 mt-1">
-                            {(
-                              (loan.totalPaid /
-                                loan.loanConfig.totalRepayment) *
-                              100
-                            ).toFixed(1)}
-                            % paid
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-4 flex space-x-3">
-                      <button
-                        onClick={() => recordPayment(loan._id)}
-                        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
-                      >
-                        Record Payment
-                      </button>
-                      <button
-                        onClick={() => fetchPaymentHistory(loan._id)}
-                        className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition-colors"
-                      >
-                        View History
-                      </button>
-                    </div>
-                  </div>
+                  <Box>
+                    <Typography variant="h6" fontWeight="bold">
+                      {loan.personalDetails.fullName}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {loan.userId.email}
+                    </Typography>
+                  </Box>
+                  <Chip label={loan.status.toUpperCase()} color="primary" />
+                </Box>
 
-                  {/* Payment History Modal */}
-                  {selectedLoan === loan._id && (
-                    <div className="border-t border-gray-200 bg-gray-50 p-6">
-                      <div className="flex justify-between items-center mb-4">
-                        <h4 className="text-lg font-semibold">
-                          Payment History
-                        </h4>
-                        <button
-                          onClick={() => setSelectedLoan(null)}
-                          className="text-gray-500 hover:text-gray-700"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                      {paymentHistory.length === 0 ? (
-                        <p className="text-gray-500">
-                          No payments recorded yet
-                        </p>
-                      ) : (
-                        <div className="overflow-x-auto">
-                          <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-100">
-                              <tr>
-                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
-                                  Date
-                                </th>
-                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
-                                  UTR
-                                </th>
-                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
-                                  Amount
-                                </th>
-                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
-                                  Method
-                                </th>
-                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
-                                  Recorded By
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                              {paymentHistory.map((payment) => (
-                                <tr key={payment._id}>
-                                  <td className="px-4 py-2 text-sm">
-                                    {new Date(
-                                      payment.paymentDate,
-                                    ).toLocaleDateString()}
-                                  </td>
-                                  <td className="px-4 py-2 text-sm font-mono">
-                                    {payment.utrNumber}
-                                  </td>
-                                  <td className="px-4 py-2 text-sm font-medium">
-                                    ₹{payment.amount.toFixed(2)}
-                                  </td>
-                                  <td className="px-4 py-2 text-sm capitalize">
-                                    {payment.paymentMethod || "bank_transfer"}
-                                  </td>
-                                  <td className="px-4 py-2 text-sm">
-                                    {payment.recordedBy.email}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Closed Loans Summary */}
-        {closedLoans.length > 0 && (
-          <div>
-            <h2 className="text-2xl font-semibold mb-4">
-              Recently Closed Loans
-            </h2>
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
-                      Borrower
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
+                <Grid container spacing={2} sx={{ mt: 2 }}>
+                  <Grid item xs={12} sm={3}>
+                    <Typography variant="body2" color="text.secondary">
                       Total Repayment
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
+                    </Typography>
+                    <Typography variant="h6">
+                      ₹{loan.loanConfig.totalRepayment.toFixed(2)}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={3}>
+                    <Typography variant="body2" color="text.secondary">
                       Total Paid
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">
-                      Closed Date
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {closedLoans.slice(0, 10).map((loan) => (
-                    <tr key={loan._id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {loan.personalDetails.fullName}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ₹{loan.loanConfig.totalRepayment.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">
-                        ₹{loan.totalPaid.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(loan.updatedAt).toLocaleDateString()}
-                      </td>
-                    </tr>
+                    </Typography>
+                    <Typography variant="h6" color="success.main">
+                      ₹{loan.totalPaid.toFixed(2)}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={3}>
+                    <Typography variant="body2" color="text.secondary">
+                      Outstanding Balance
+                    </Typography>
+                    <Typography variant="h6" color="error">
+                      ₹{loan.outstandingBalance.toFixed(2)}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={3}>
+                    <Button
+                      variant="contained"
+                      onClick={() => {
+                        setSelectedLoan(loan);
+                        setPaymentDialogOpen(true);
+                      }}
+                      sx={{ mt: 1 }}
+                    >
+                      Record Payment
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      onClick={() => fetchPaymentHistory(loan)}
+                      sx={{ mt: 1, ml: 1 }}
+                    >
+                      View History
+                    </Button>
+                  </Grid>
+                </Grid>
+
+                <Box sx={{ mt: 2 }}>
+                  <LinearProgress
+                    variant="determinate"
+                    value={
+                      (loan.totalPaid / loan.loanConfig.totalRepayment) * 100
+                    }
+                    sx={{ height: 8, borderRadius: 4 }}
+                  />
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ mt: 0.5 }}
+                  >
+                    {(
+                      (loan.totalPaid / loan.loanConfig.totalRepayment) *
+                      100
+                    ).toFixed(1)}
+                    % paid
+                  </Typography>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+
+      {/* Payment History Dialog */}
+      <Dialog
+        open={!!selectedLoan && !paymentDialogOpen}
+        onClose={() => setSelectedLoan(null)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Typography variant="h6">
+              Payment History - {selectedLoan?.personalDetails.fullName}
+            </Typography>
+            <IconButton onClick={() => setSelectedLoan(null)}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {paymentHistory.length === 0 ? (
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              textAlign="center"
+              sx={{ py: 4 }}
+            >
+              No payments recorded yet
+            </Typography>
+          ) : (
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Date</TableCell>
+                    <TableCell>UTR Number</TableCell>
+                    <TableCell>Amount</TableCell>
+                    <TableCell>Method</TableCell>
+                    <TableCell>Recorded By</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {paymentHistory.map((payment) => (
+                    <TableRow key={payment._id}>
+                      <TableCell>
+                        {new Date(payment.paymentDate).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>{payment.utrNumber}</TableCell>
+                      <TableCell>₹{payment.amount.toFixed(2)}</TableCell>
+                      <TableCell>{payment.paymentMethod}</TableCell>
+                      <TableCell>{payment.recordedBy.email}</TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Record Payment Dialog */}
+      <Dialog
+        open={paymentDialogOpen}
+        onClose={() => setPaymentDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Record Payment</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            label="UTR Number"
+            value={utrNumber}
+            onChange={(e) => setUtrNumber(e.target.value)}
+            margin="normal"
+            required
+          />
+          <TextField
+            fullWidth
+            label="Amount (₹)"
+            type="number"
+            value={paymentAmount}
+            onChange={(e) => setPaymentAmount(e.target.value)}
+            margin="normal"
+            required
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPaymentDialogOpen(false)}>Cancel</Button>
+          <Button onClick={recordPayment} variant="contained">
+            Submit Payment
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Container>
   );
 }
