@@ -44,4 +44,22 @@ export const disbursementController = {
       res.status(500).json({ error: "Failed to disburse loan" });
     }
   },
+
+  // Get disbursement history
+  async getDisbursementHistory(req: AuthRequest, res: Response) {
+    try {
+      const loans = await LoanApplication.find({
+        status: "disbursed",
+        "disbursementDetails.disbursedDate": { $exists: true },
+      })
+        .populate("userId", "email fullName")
+        .sort({ "disbursementDetails.disbursedDate": -1 })
+        .limit(50);
+
+      res.json(loans);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Failed to fetch disbursement history" });
+    }
+  },
 };

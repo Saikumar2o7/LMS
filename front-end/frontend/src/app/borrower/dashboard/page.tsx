@@ -34,9 +34,20 @@ export default function BorrowerDashboard() {
         },
       );
       const data = await response.json();
-      setApplications(data);
+      if (Array.isArray(data)) {
+        setApplications(data);
+      } else if (data && Array.isArray(data.data)) {
+        // Common pattern: { success: true, data: [...] }
+        setApplications(data.data);
+      } else if (data && Array.isArray(data.applications)) {
+        setApplications(data.applications);
+      } else {
+        console.warn("Unexpected API response format:", data);
+        setApplications([]); // fallback
+      }
     } catch (error) {
       console.error("Failed to fetch applications:", error);
+      setApplications([]);
     } finally {
       setLoading(false);
     }
@@ -90,7 +101,7 @@ export default function BorrowerDashboard() {
           </div>
         ) : (
           <div className="grid gap-6">
-            {applications.map((app) => (
+            {applications?.map((app) => (
               <div key={app._id} className="bg-white rounded-lg shadow p-6">
                 <div className="flex justify-between items-start mb-4">
                   <div>
