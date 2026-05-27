@@ -65,11 +65,7 @@ export default function Navigation() {
           },
         ];
       case "admin":
-        return [
-          { name: "Overview", href: "/admin", icon: <DashboardIcon /> },
-          { name: "Users", href: "/admin?tab=users", icon: <PeopleIcon /> },
-          { name: "Loans", href: "/admin?tab=loans", icon: <ReceiptIcon /> },
-        ];
+        return [{ name: "Overview", href: "/admin", icon: <DashboardIcon /> }];
       case "sales":
         return [
           { name: "Leads", href: "/sales", icon: <PeopleIcon /> },
